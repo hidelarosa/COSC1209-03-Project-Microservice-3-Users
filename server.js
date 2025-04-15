@@ -1,35 +1,46 @@
-const app = require('koa')();
-const router = require('koa-router')();
+const Koa = require('koa');
+const Router = require('koa-router');
 const db = require('./db.json');
 
+const app = new Koa();
+const router = new Router();
+
 // Log requests
-app.use(function *(next){
-  const start = new Date;
-  yield next;
-  const ms = new Date - start;
-  console.log('%s %s - %s', this.method, this.url, ms);
+app.use(async (ctx, next) => {
+  const start = new Date();
+  await next();
+  const ms = new Date() - start;
+  console.log('%s %s - %s', ctx.method, ctx.url, ms);
 });
 
-router.get('/api/users', function *(next) {
-  this.body = db.users;
+router.get('/api/users', async (ctx) => {
+  ctx.body = db.users;
 });
 
-router.get('/api/users/:userId', function *(next) {
-  const id = parseInt(this.params.userId);
-  this.body = db.users.find((user) => user.id == id);
+router.get('/api/users/:userId', async (ctx) => {
+  const id = parseInt(ctx.params.userId);
+  const user = db.users.find((user) => user.id === id);
+
+  if (!user) {
+    ctx.status = 404;
+    ctx.body = { error: 'User not found' };
+    return;
+  }
+
+  ctx.body = user;
 });
 
-router.get('/api/', function *() {
-  this.body = "API ready to receive requests";
+router.get('/api/', async (ctx) => {
+  ctx.body = "API ready to receive requests";
 });
 
-router.get('/', function *() {
-  this.body = "Ready to receive requests";
+router.get('/', async (ctx) => {
+  ctx.body = "User service ready";
 });
 
 app.use(router.routes());
 app.use(router.allowedMethods());
 
-app.listen(3000);
-
-console.log('Worker started');
+app.listen(3003, () => {
+  console.log('Users service running on http://localhost:3003');
+});
